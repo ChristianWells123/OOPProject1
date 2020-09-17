@@ -1,0 +1,47 @@
+Christian Wells - Preliminary Design for Project #1
+
+
+ Class HTMLFormatter
+====Functions====
+
+
+public static void main(String[] args)
+
+Will start program execution by calling convertHTML. Will probably take arguments such
+as file name for the input/output files but have defaults.
+
+
+public static void convertHTML(Scanner inFile, PrintWriter outFile)
+
+Main method for converting HTML. inFile is a Scanner that reads the input HTML file
+and outFile is a PrintWriter that prints to the output txt file. Will probably read
+the entirety of the input file into a string in order to manipulate it easier.
+When it finds appropritate printable tags, it will call the function for that tag.
+Anything outside of printable tags will probably be ignored.
+(Printable tags include <title> <h>, and <p>.)
+
+
+public static void printTitle(String title, PrintWriter outFile)
+
+This method will take the title and print it center-justified. `title` is the trimmed string
+between the <title> tags.
+
+
+public static void printHeading(String heading, PrintWriter outFile)
+
+This method will print the heading in all caps. `heading` is the trimmed string between
+the heading tags. Could have other tags inside, so this method will have to parse/eliminate
+those. It will also probably have to use text wrapping.
+
+
+public static void printParagraph(String text, PrintWriter outFile)
+
+This method will print paragraphs with their original capitalization. `text` is the trimmed
+text between paragraph tags. Could have other tags inside, so this method will have to 
+parse/eliminate those. It will also have to use text wrapping.
+
+
+public static String[] wrapText(String text)
+
+This method will take a string of potentially over 80 characters and split it into
+an array of different strings, each one to be printed on different lines.
