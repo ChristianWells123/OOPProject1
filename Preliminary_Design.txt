@@ -1,7 +1,7 @@
 Christian Wells - Preliminary Design for Project #1
 
 
- Class HTMLFormatter
+Class HTMLFormatter
 ====Functions====
 
 
@@ -39,6 +39,12 @@ public static void printParagraph(String text, PrintWriter outFile)
 This method will print paragraphs with their original capitalization. `text` is the trimmed
 text between paragraph tags. Could have other tags inside, so this method will have to 
 parse/eliminate those. It will also have to use text wrapping.
+
+
+public static String eliminateUnusedTags(String text)
+
+This method will return a string which doesn't have any tags used by this project.
+In this case, all tags but <title>, <h#>, and <p> will be eliminated.
 
 
 public static String[] wrapText(String text)
