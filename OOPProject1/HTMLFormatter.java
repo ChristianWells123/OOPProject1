@@ -18,24 +18,68 @@ public class HTMLFormatter {
 		while (html.hasNextLine()) {
 			htmlContents = htmlContents + html.nextLine();
 		}
-		System.out.println(htmlContents);
-		if (htmlContents.toLowerCase().contains("<title")) {
+		//This is not for text content, but to check for tags independent of case
+		String lowerCaseHtmlContents = htmlContents.toLowerCase();
+		if (lowerCaseHtmlContents.contains("<title")) {
+			//print the contents of the title tag as a title
+			printTitle(getContentsOfTag(getFirstTag(htmlContents, "title")), output);
+		}
+		String bodyContents = getContentsOfTag(getFirstTag(htmlContents, "body"));
+		printBody(bodyContents, output);
+	}
 
+	//Handles printing the body of the HTML file.
+	public static void printBody(final String text, final PrintWriter output) {
+		int currentPos = 0; 
+		String body = text.trim();
+		while (currentPos < body.length()) {
+			//Indicates the first tag after current pos
+			int tagOpeningStart = body.indexOf("<", currentPos) + 1;
+			if (tagOpeningStart == 0) return; //i.e. body.indexOf("<", currentPos) == -1
+			//The end of the first openeing tag after current pos
+			int tagOpeningEnd = body.indexOf(">", tagOpeningStart);
+			//The end of the name of the first tag after current pos
+			int tagNameEnd = Math.min(body.indexOf(" ", tagOpeningStart), tagOpeningEnd);
+			//The name of the first tag after current pos
+			String tagName = body.substring(tagOpeningStart, tagNameEnd).trim();
+			if (tagName.equals("br")) {
+				currentPos += 4; 
+				output.println();
+				continue;
+			}
+			String tagContent = getFirstTag(body.substring(currentPos), tagName);
+			if (tagName.equals("h1") || tagName.equals("h2") || tagName.equals("h3") ||
+			tagName.equals("h4") || tagName.equals("h5") || tagName.equals("h6")) {
+				printHeading(getContentsOfTag(tagContent).trim(), output);
+			}
+			else if (tagName.equals("p")) {
+				printParagraph(getContentsOfTag(tagContent).trim(), output);
+			}
+			currentPos += tagContent.length();
 		}
 	}
 
+	//Prints the specified String to output as a paragraph.
 	public static void printParagraph(final String text, final PrintWriter output) {
-		String out = wrapText(text);
-		output.println(out);
+		String[] lines = text.split("<br>");
+		for (String line : lines) {
+			String out = wrapText(line.trim());
+			output.println(out);
+		}
 		output.println();
 	}
 
+	//Prints the specified String to output as a heading.
 	public static void printHeading(final String heading, final PrintWriter output) {
-		String out = wrapText(heading.toUpperCase());
-		output.println(out);
+		String[] lines = heading.split("<br>");
+		for (String line : lines) {
+			String out = wrapText(line.trim().toUpperCase());
+			output.println(out);
+		}
 		output.println();
 	}
 
+	//Prints the specified String to output as a title.
 	public static void printTitle(final String title, final PrintWriter output) {
 		String out = title.toUpperCase();
 		//If title is too big to fit on one line, separate it into multiple lines
@@ -49,12 +93,49 @@ public class HTMLFormatter {
 			output.println(line);
 		}
 		output.println();
+		output.println();
+	}
+
+	//Returns the contents, including the tag itself, of the first of the indicated tag in input.
+	public static String getFirstTag(final String input, final String tag) {
+		String inputLower = input.toLowerCase();
+		int indexOfTag = inputLower.indexOf("<" + tag);
+		if (indexOfTag == -1) return "";
+		int tagOpeningEnd = input.indexOf(">", indexOfTag) + 1;
+		int tagClosingStart = inputLower.indexOf("</" + tag);
+		int tagClosingEnd = inputLower.indexOf(">", tagClosingStart);
+
+		//The number of the same tag that is between the base tag and the current end point
+		/* E.g. <table>... <table> </table> ... </table>
+						            ^ current position */
+		int numberOfSimilarTags = numberOfOccurences(inputLower.substring(tagOpeningEnd, tagClosingStart + 1), "<" + tag);
+		int numberOfSimilarTagsAccountedFor = 0;
+
+		while(numberOfSimilarTags > numberOfSimilarTagsAccountedFor) {
+			tagClosingStart = inputLower.indexOf("</" + tag, tagClosingEnd);
+			tagClosingEnd = inputLower.indexOf(">", tagClosingStart);
+			numberOfSimilarTagsAccountedFor ++;
+			numberOfSimilarTags = numberOfOccurences(inputLower.substring(tagOpeningEnd, tagClosingStart + 1), "<" + tag);
+			
+		}
+		return input.substring(indexOfTag, tagClosingEnd + 1).trim();
+	}
+
+	//Returns the number of times checkFor occurs in str.
+	static int numberOfOccurences(String str, String checkFor) {
+		int pos = 0;
+		int out = 0;
+		while (str.indexOf(checkFor, pos+1) >= 0) {
+			out += 1;
+			pos = str.indexOf(checkFor, pos+1);
+		}
+		return out;
 	}
 
 	public static String getContentsOfTag(final String tagText) {
 		int indexOfOpeningTag = tagText.indexOf(">");
 		int indexOfClosingTag = tagText.lastIndexOf("<");
-		return tagText.substring(indexOfOpeningTag, indexOfClosingTag);
+		return tagText.substring(indexOfOpeningTag + 1, indexOfClosingTag).trim();
 	}
 
 	public static String wrapText(final String text) {
@@ -101,7 +182,6 @@ public class HTMLFormatter {
 		}
 		Scanner input = new Scanner(inputFile);
 		PrintWriter output = new PrintWriter(outputFileName);
-		System.out.println(inputFileName);
 		formatHTMLToText(input, output);
 		input.close();
 		output.close();
