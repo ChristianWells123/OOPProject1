@@ -6,6 +6,10 @@ import java.util.Scanner;
 public class HTMLFormatter {
 
 	final static int OUTPUT_WIDTH = 80;
+	final static String[] VOID_TAGS = {
+		"area", "base", "br", "embed", "hr", "iframe", "img", 
+		"input", "link", "meta", "param", "source", "track"
+	};
 
 	// This function take an HTML file as input, and writes to a text file as an
 	// output.
@@ -16,7 +20,7 @@ public class HTMLFormatter {
 	public static void formatHTMLToText(final Scanner html, final PrintWriter output){
 		String htmlContents = "";
 		while (html.hasNextLine()) {
-			htmlContents = htmlContents + html.nextLine();
+			htmlContents = htmlContents + html.nextLine().trim();
 		}
 		//This is not for text content, but to check for tags independent of case
 		String lowerCaseHtmlContents = htmlContents.toLowerCase();
@@ -43,8 +47,11 @@ public class HTMLFormatter {
 			//The name of the first tag after current pos
 			String tagName = body.substring(tagOpeningStart, tagNameEnd).trim();
 			if (tagName.equals("br")) {
-				currentPos += 4; 
+				currentPos += (tagOpeningEnd - tagOpeningStart); 
 				output.println();
+				continue;
+			} else if (isVoidTag(tagName)) {
+				currentPos += (tagOpeningEnd - tagOpeningStart);
 				continue;
 			}
 			String tagContent = getFirstTag(body.substring(currentPos), tagName);
@@ -55,6 +62,14 @@ public class HTMLFormatter {
 			else if (tagName.equals("p")) {
 				printParagraph(getContentsOfTag(tagContent).trim(), output);
 			}
+			else if (tagName.equals("table")) {
+
+				printTable(getContentsOfTag(tagContent).trim(), output);
+			}
+			/*else {
+				System.out.println(tagName);
+				printBody(getContentsOfTag(tagContent).trim(), output);
+			}*/
 			currentPos += tagContent.length();
 		}
 	}
@@ -63,7 +78,7 @@ public class HTMLFormatter {
 	public static void printParagraph(final String text, final PrintWriter output) {
 		String[] lines = text.split("<br>");
 		for (String line : lines) {
-			String out = wrapText(line.trim());
+			String out = wrapText(purgeTags(line.trim()));
 			output.println(out);
 		}
 		output.println();
@@ -73,7 +88,7 @@ public class HTMLFormatter {
 	public static void printHeading(final String heading, final PrintWriter output) {
 		String[] lines = heading.split("<br>");
 		for (String line : lines) {
-			String out = wrapText(line.trim().toUpperCase());
+			String out = wrapText(purgeTags(line.trim().toUpperCase()));
 			output.println(out);
 		}
 		output.println();
@@ -96,18 +111,49 @@ public class HTMLFormatter {
 		output.println();
 	}
 
+	public static void printTable(final String table, final PrintWriter output) {
+		String fixedTable = table
+			.replaceAll("<thead>", "")
+			.replaceAll("</thead>", "")
+			.replaceAll("<tbody>", "")
+			.replaceAll("</tbody>", "");
+		
+		int currentPos = 0;
+		while (currentPos < fixedTable.length()) {
+			String rowTag = getFirstTag(fixedTable.substring(currentPos), "tr");
+			String row = getContentsOfTag(rowTag);
+			String line = "";
+			int currentRowPos = 0;
+			while (row.substring(currentRowPos).contains("<th") || row.substring(currentRowPos).contains("<td")) {
+				String dataTag = "";
+				if (row.substring(currentRowPos).contains("<th")) dataTag = getFirstTag(row.substring(currentRowPos), "th"); 
+				else dataTag = getFirstTag(row.substring(currentRowPos), "td");
+				String data = purgeTags(getContentsOfTag(dataTag));
+				line += data;
+				currentRowPos += dataTag.length();
+				if (row.substring(currentRowPos).contains("<th") || row.substring(currentRowPos).contains("<td")){
+					line += ", ";
+				}
+			}
+			currentPos += rowTag.length();
+			output.println(wrapText(line));
+		}
+		output.println();
+	}
+
 	//Returns the contents, including the tag itself, of the first of the indicated tag in input.
 	public static String getFirstTag(final String input, final String tag) {
 		String inputLower = input.toLowerCase();
 		int indexOfTag = inputLower.indexOf("<" + tag);
 		if (indexOfTag == -1) return "";
 		int tagOpeningEnd = input.indexOf(">", indexOfTag) + 1;
-		int tagClosingStart = inputLower.indexOf("</" + tag);
+		int tagClosingStart = inputLower.indexOf("</" + tag, tagOpeningEnd);
 		int tagClosingEnd = inputLower.indexOf(">", tagClosingStart);
 
 		//The number of the same tag that is between the base tag and the current end point
 		/* E.g. <table>... <table> </table> ... </table>
-						            ^ current position */
+									^ current position
+							seen one, need to account for it */
 		int numberOfSimilarTags = numberOfOccurences(inputLower.substring(tagOpeningEnd, tagClosingStart + 1), "<" + tag);
 		int numberOfSimilarTagsAccountedFor = 0;
 
@@ -132,12 +178,32 @@ public class HTMLFormatter {
 		return out;
 	}
 
+	//Returns true if the given tag name is in the array of void tag names.
+	static boolean isVoidTag(String tag) {
+		boolean in = false;
+		for (String vtag : VOID_TAGS) {
+			if (vtag.equals(tag)) in = true;
+		}
+		return in;
+	}
+
+	//input is the HTML tag and it outputs the contents only, without the tag itself.
 	public static String getContentsOfTag(final String tagText) {
 		int indexOfOpeningTag = tagText.indexOf(">");
 		int indexOfClosingTag = tagText.lastIndexOf("<");
 		return tagText.substring(indexOfOpeningTag + 1, indexOfClosingTag).trim();
 	}
 
+	public static String purgeTags(String input) {
+		String text = input.trim();
+		while (text.contains("<")) {
+			text = text.substring(0, text.indexOf("<")) + text.substring(text.indexOf(">") + 1);
+		}
+		return text;
+	}
+
+	//The output of this function is the input with newlines so that no line is more than 
+	//OUTPUT_LENGTH.
 	public static String wrapText(final String text) {
 		int currentPos = 0;
 		String out = text;
