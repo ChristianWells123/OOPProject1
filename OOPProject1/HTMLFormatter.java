@@ -20,6 +20,7 @@ public class HTMLFormatter {
 	public static void formatHTMLToText(final Scanner html, final PrintWriter output){
 		String htmlContents = "";
 		while (html.hasNextLine()) {
+			//Read in the HTML an ignore newlines + whitespace.
 			htmlContents = htmlContents + html.nextLine().trim();
 		}
 		//This is not for text content, but to check for tags independent of case
@@ -112,7 +113,8 @@ public class HTMLFormatter {
 	}
 
 	public static void printTable(final String table, final PrintWriter output) {
-		String fixedTable = table
+		//remove thead and tbody tags
+		String fixedTable = table.trim()
 			.replaceAll("<thead>", "")
 			.replaceAll("</thead>", "")
 			.replaceAll("<tbody>", "")
@@ -120,17 +122,21 @@ public class HTMLFormatter {
 		
 		int currentPos = 0;
 		while (currentPos < fixedTable.length()) {
+			//Get the first row after the current pos
 			String rowTag = getFirstTag(fixedTable.substring(currentPos), "tr");
 			String row = getContentsOfTag(rowTag);
 			String line = "";
 			int currentRowPos = 0;
+			//While the row still has th or td tags...
 			while (row.substring(currentRowPos).contains("<th") || row.substring(currentRowPos).contains("<td")) {
 				String dataTag = "";
 				if (row.substring(currentRowPos).contains("<th")) dataTag = getFirstTag(row.substring(currentRowPos), "th"); 
 				else dataTag = getFirstTag(row.substring(currentRowPos), "td");
+				//The contents of the data tag, purged of any internal tags
 				String data = purgeTags(getContentsOfTag(dataTag));
 				line += data;
 				currentRowPos += dataTag.length();
+				//If this is not the last data tag...
 				if (row.substring(currentRowPos).contains("<th") || row.substring(currentRowPos).contains("<td")){
 					line += ", ";
 				}
@@ -158,6 +164,7 @@ public class HTMLFormatter {
 		int numberOfSimilarTagsAccountedFor = 0;
 
 		while(numberOfSimilarTags > numberOfSimilarTagsAccountedFor) {
+			//Look at the closing tag AFTER the one we saw if there are any unnacounted same tags
 			tagClosingStart = inputLower.indexOf("</" + tag, tagClosingEnd);
 			tagClosingEnd = inputLower.indexOf(">", tagClosingStart);
 			numberOfSimilarTagsAccountedFor ++;
@@ -242,13 +249,15 @@ public class HTMLFormatter {
 			prompt.close();
 		}
 		final File inputFile = new File(inputFileName);
+		final File outputFile = new File(outputFileName);
 		if (!inputFile.exists() || inputFile.isDirectory()) {
 			System.out.println("Expected input file at " + inputFileName);
 			return;
 		}
 		Scanner input = new Scanner(inputFile);
-		PrintWriter output = new PrintWriter(outputFileName);
+		PrintWriter output = new PrintWriter(outputFile);
 		formatHTMLToText(input, output);
+		System.out.println("Wrote to file: " + outputFile.getAbsolutePath());
 		input.close();
 		output.close();
 		
